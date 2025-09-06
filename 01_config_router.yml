@@ -1,6 +1,6 @@
 ---
 - name: Configure domain name
-  hosts: routers
+  hosts: "{{ target_host | default('all') }}"
   gather_facts: false
   tasks:
     - name: Print date and time
