@@ -1,6 +1,6 @@
 ---
 - name: Configure domain name
-  hosts: "{{ target_host | default('all') }}"
+  hosts: all
   gather_facts: false
   tasks:
     - name: Print date and time
