@@ -7,7 +7,7 @@
     - name: Backup running config
       cisco.ios.ios_config:
         backup: true
-        backup_options: 
+        backup_options:
           filename: router1-bk.cfg
-          dir_path: 
+          dir_path:
       register: config_backup
