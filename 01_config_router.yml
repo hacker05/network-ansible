@@ -1,16 +1,205 @@
 ---
-- name: Configure domain name (Fallback - No Collections Required)
+- name: Backup Cisco Router Configuration
   hosts: all
-  gather_facts: true
+  gather_facts: false
   vars:
-    domain_name: "testdomain.com"
-    backup_dir: "/tmp/router_backups"
+    backup_base_dir: "/tmp/router_backups"
+    timestamp: "{{ lookup('pipe', 'date +%Y%m%d_%H%M%S') }}"
+    date_readable: "{{ lookup('pipe', 'date +\"%Y-%m-%d %H:%M:%S\"') }}"
     
   tasks:
-    - name: Create backup directory
+    - name: Display backup start time
+      ansible.builtin.debug:
+        msg: |
+          === Router Configuration Backup ===
+          Start Time: {{ date_readable }}
+          Target: {{ inventory_hostname }} ({{ ansible_host }})
+          ===================================
+
+    - name: Create backup directory structure
       ansible.builtin.file:
-        path: "{{ backup_dir }}/{{ inventory_hostname }}"
+        path: "{{ backup_base_dir }}/{{ inventory_hostname }}/{{ timestamp[:8] }}"
         state: directory
         mode: '0755'
       delegate_to: localhost
+
+    - name: Test device connectivity
+      ansible.builtin.raw: "show clock"
+      register: device_time
+      timeout: 30
+      changed_when: false
+
+    - name: Get device hostname
+      ansible.builtin.raw: "show running-config | include hostname"
+      register: hostname_output
+      timeout: 30
+      changed_when: false
+
+    - name: Extract device hostname
+      ansible.builtin.set_fact:
+        device_hostname: "{{ hostname_output.stdout.split()[1] | default(inventory_hostname) }}"
+      when: hostname_output.stdout is defined and hostname_output.stdout != ""
+
+    - name: Get device version information
+      ansible.builtin.raw: "show version | include IOS"
+      register: version_info
+      timeout: 30
+      changed_when: false
+
+    - name: Get running configuration
+      ansible.builtin.raw: "show running-config"
+      register: running_config
+      timeout: 60
+
+    - name: Get startup configuration
+      ansible.builtin.raw: "show startup-config"
+      register: startup_config
+      timeout: 60
+      failed_when: false
+
+    - name: Get interface status
+      ansible.builtin.raw: "show ip interface brief"
+      register: interface_status
+      timeout: 30
+      changed_when: false
+
+    - name: Get routing table
+      ansible.builtin.raw: "show ip route"
+      register: routing_table
+      timeout: 30
+      changed_when: false
+
+    - name: Get VLAN information
+      ansible.builtin.raw: "show vlan brief"
+      register: vlan_info
+      timeout: 30
+      changed_when: false
+      failed_when: false
+
+    - name: Create running config backup
+      ansible.builtin.copy:
+        content: |
+          ! ============================================================
+          ! RUNNING CONFIGURATION BACKUP
+          ! ============================================================
+          ! Device: {{ device_hostname | default(inventory_hostname) }}
+          ! IP Address: {{ ansible_host }}
+          ! Backup Date: {{ date_readable }}
+          ! Backup Type: Running Configuration
+          ! Device Time: {{ device_time.stdout_lines[0] | default('Unknown') }}
+          ! IOS Version: {{ version_info.stdout_lines[0] | default('Unknown') }}
+          ! ============================================================
+          !
+          {{ running_config.stdout }}
+        dest: "{{ backup_base_dir }}/{{ inventory_hostname }}/{{ timestamp[:8] }}/{{ device_hostname | default(inventory_hostname) }}_running_{{ timestamp }}.txt"
+      delegate_to: localhost
+
+    - name: Create startup config backup
+      ansible.builtin.copy:
+        content: |
+          ! ============================================================
+          ! STARTUP CONFIGURATION BACKUP
+          ! ============================================================
+          ! Device: {{ device_hostname | default(inventory_hostname) }}
+          ! IP Address: {{ ansible_host }}
+          ! Backup Date: {{ date_readable }}
+          ! Backup Type: Startup Configuration
+          ! ============================================================
+          !
+          {{ startup_config.stdout }}
+        dest: "{{ backup_base_dir }}/{{ inventory_hostname }}/{{ timestamp[:8] }}/{{ device_hostname | default(inventory_hostname) }}_startup_{{ timestamp }}.txt"
+      delegate_to: localhost
+      when: startup_config is succeeded and startup_config.stdout is defined
+
+    - name: Create interface status report
+      ansible.builtin.copy:
+        content: |
+          ! ============================================================
+          ! INTERFACE STATUS REPORT
+          ! ============================================================
+          ! Device: {{ device_hostname | default(inventory_hostname) }}
+          ! IP Address: {{ ansible_host }}
+          ! Report Date: {{ date_readable }}
+          ! ============================================================
+          !
+          {{ interface_status.stdout }}
+        dest: "{{ backup_base_dir }}/{{ inventory_hostname }}/{{ timestamp[:8] }}/{{ device_hostname | default(inventory_hostname) }}_interfaces_{{ timestamp }}.txt"
+      delegate_to: localhost
+
+    - name: Create routing table report
+      ansible.builtin.copy:
+        content: |
+          ! ============================================================
+          ! ROUTING TABLE REPORT
+          ! ============================================================
+          ! Device: {{ device_hostname | default(inventory_hostname) }}
+          ! IP Address: {{ ansible_host }}
+          ! Report Date: {{ date_readable }}
+          ! ============================================================
+          !
+          {{ routing_table.stdout }}
+        dest: "{{ backup_base_dir }}/{{ inventory_hostname }}/{{ timestamp[:8] }}/{{ device_hostname | default(inventory_hostname) }}_routes_{{ timestamp }}.txt"
+      delegate_to: localhost
+
+    - name: Create VLAN report
+      ansible.builtin.copy:
+        content: |
+          ! ============================================================
+          ! VLAN INFORMATION REPORT
+          ! ============================================================
+          ! Device: {{ device_hostname | default(inventory_hostname) }}
+          ! IP Address: {{ ansible_host }}
+          ! Report Date: {{ date_readable }}
+          ! ============================================================
+          !
+          {{ vlan_info.stdout }}
+        dest: "{{ backup_base_dir }}/{{ inventory_hostname }}/{{ timestamp[:8] }}/{{ device_hostname | default(inventory_hostname) }}_vlans_{{ timestamp }}.txt"
+      delegate_to: localhost
+      when: vlan_info is succeeded and vlan_info.stdout is defined
+
+    - name: Create backup summary report
+      ansible.builtin.copy:
+        content: |
+          ============================================================
+          BACKUP SUMMARY REPORT
+          ============================================================
+          Device Information:
+          - Hostname: {{ device_hostname | default(inventory_hostname) }}
+          - IP Address: {{ ansible_host }}
+          - Device Time: {{ device_time.stdout_lines[0] | default('Unknown') }}
+          - IOS Version: {{ version_info.stdout_lines[0] | default('Unknown') }}
+          
+          Backup Information:
+          - Backup Date: {{ date_readable }}
+          - Backup Timestamp: {{ timestamp }}
+          - Backup Location: {{ backup_base_dir }}/{{ inventory_hostname }}/{{ timestamp[:8] }}/
+          
+          Files Created:
+          - Running Config: {{ device_hostname | default(inventory_hostname) }}_running_{{ timestamp }}.txt
+          - Startup Config: {{ device_hostname | default(inventory_hostname) }}_startup_{{ timestamp }}.txt ({{ 'Created' if startup_config is succeeded else 'Failed' }})
+          - Interface Status: {{ device_hostname | default(inventory_hostname) }}_interfaces_{{ timestamp }}.txt
+          - Routing Table: {{ device_hostname | default(inventory_hostname) }}_routes_{{ timestamp }}.txt
+          - VLAN Information: {{ device_hostname | default(inventory_hostname) }}_vlans_{{ timestamp }}.txt ({{ 'Created' if vlan_info is succeeded else 'N/A' }})
+          
+          Backup Status: SUCCESS
+          ============================================================
+        dest: "{{ backup_base_dir }}/{{ inventory_hostname }}/{{ timestamp[:8] }}/BACKUP_SUMMARY_{{ timestamp }}.txt"
+      delegate_to: localhost
+
+    - name: Display backup completion status
+      ansible.builtin.debug:
+        msg: |
+          === Backup Completed Successfully ===
+          Device: {{ device_hostname | default(inventory_hostname) }}
+          IP: {{ ansible_host }}
+          Timestamp: {{ timestamp }}
+          Location: {{ backup_base_dir }}/{{ inventory_hostname }}/{{ timestamp[:8] }}/
+          Files Created:
+          - Running Config ✓
+          - Startup Config {{ '✓' if startup_config is succeeded else '✗' }}
+          - Interface Status ✓
+          - Routing Table ✓
+          - VLAN Info {{ '✓' if vlan_info is succeeded else '✗' }}
+          - Summary Report ✓
+          =====================================
       
