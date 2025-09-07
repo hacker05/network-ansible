@@ -1,15 +1,13 @@
 ---
-- name: Cisco ios facts demo
+- name: Backup Cisco IOS running configuration
   hosts: all
-  # gather_facts: false
+  gather_facts: false
+  connection: network_cli
   tasks:
-    - name: Gather IOS facts
-      cisco.ios.ios_facts:
-        gather_subset: all
-        available_network_resources: true
-        gather_network_resources: l3_interfaces
-        
-    - name: Print ansible_facts
-      ansible.builtin.debug:
-        msg:
-          - "{{ ansible_facts }}"
+    - name: Backup running config
+      cisco.ios.ios_config:
+        backup: true
+        backup_options: 
+          filename: router1-bk.cfg
+          dir_path: 
+      register: config_backup
