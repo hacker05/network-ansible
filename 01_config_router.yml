@@ -1,43 +1,15 @@
 ---
-- name: Backup Router Configuration
+- name: Cisco ios facts demo
   hosts: all
-  gather_facts: false
-  vars:
-    backup_dir: "/tmp/router_backups"
-    
+  # gather_facts: false
   tasks:
-    - name: Create backup directory
-      ansible.builtin.file:
-        path: "{{ backup_dir }}/{{ inventory_hostname }}"
-        state: directory
-        mode: '0755'
-      delegate_to: localhost
-
-    - name: Get running configuration
-      ansible.builtin.raw: "show running-config"
-      register: running_config
-      timeout: 60
-
-    - name: Get hostname
-      ansible.builtin.raw: "show running-config | include hostname"
-      register: hostname_output
-      timeout: 10
-
-    - name: Set hostname
-      ansible.builtin.set_fact:
-        device_name: "{{ hostname_output.stdout.split()[1] | default(inventory_hostname) }}"
-
-    - name: Save backup file
-      ansible.builtin.copy:
-        content: |
-          ! Backup: {{ device_name }}
-          ! Date: {{ lookup('pipe', 'date') }}
-          ! IP: {{ ansible_host }}
-          !
-          {{ running_config.stdout }}
-        dest: "{{ backup_dir }}/{{ inventory_hostname }}/{{ device_name }}_{{ lookup('pipe', 'date +%Y%m%d_%H%M%S') }}.txt"
-      delegate_to: localhost
-
-    - name: Backup complete
+    - name: Gather IOS facts
+      cisco.ios.ios_facts:
+        gather_subset: all
+        available_network_resources: true
+        gather_network_resources: l3_interfaces
+        
+    - name: Print ansible_facts
       ansible.builtin.debug:
-        msg: "✅ Backup saved: {{ device_name }}_{{ lookup('pipe', 'date +%Y%m%d_%H%M%S') }}.txt"
+        msg:
+          - "{{ ansible_facts }}"
