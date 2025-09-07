@@ -4,10 +4,7 @@
   gather_facts: false
   connection: network_cli
   tasks:
-    - name: Backup running config
-      ios_config:
-        backup: true
-        backup_options:
-          filename: router1-bk.cfg
-          dir_path:
-      register: config_backup
+    cnos_backup:
+      configType: running-config
+      protocol: "ftp"
+      serverip: "192.168.201.131"
