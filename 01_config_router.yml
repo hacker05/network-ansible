@@ -7,10 +7,6 @@
     backup_dir: "/tmp/router_backups"
     
   tasks:
-    - name: Print date and time
-      ansible.builtin.debug:
-        msg: "Starting configuration at: {{ ansible_date_time.iso8601 }}"
-
     - name: Create backup directory
       ansible.builtin.file:
         path: "{{ backup_dir }}/{{ inventory_hostname }}"
