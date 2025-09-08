@@ -5,6 +5,6 @@
   connection: network_cli
   tasks:
   - name: run show version on remote devices
-    cisco.ios.ios_command:
+    ios_command:
      commands:
      - show version 
