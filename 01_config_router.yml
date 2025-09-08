@@ -4,7 +4,7 @@
   gather_facts: false
   connection: network_cli
   tasks:
-    cnos_backup:
-      configType: running-config
-      protocol: "ftp"
-      serverip: "192.168.201.131"
+  - name: run show version on remote devices
+    cisco.ios.ios_command:
+     commands:
+     - show version 
