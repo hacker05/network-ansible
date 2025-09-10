@@ -2,7 +2,6 @@
 - name: Backup Cisco IOS XE Running Configuration
   hosts: all
   gather_facts: no
-  connection: network_cli
 
 #
 #  This could be really cool. 
