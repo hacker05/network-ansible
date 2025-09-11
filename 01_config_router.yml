@@ -8,7 +8,7 @@
         msg: "{{ lookup('pipe', 'date +%Y-%m-%d@%H:%M:%S')}}"
     
     - name: Configure domain
-      cisco.ios.ios_config:
+      ios_config:
         lines: ip domain name testdomain.com
         backup: yes
         backup_options:
