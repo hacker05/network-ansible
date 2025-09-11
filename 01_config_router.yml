@@ -1,23 +1,26 @@
 ---
-- name: "PLAY 2: Get the Data From IOS Device"
+- name: "Get Data From IOS Device"
   hosts: all
-  connection: network_cli
-  gather_facts: false  # Add this line to disable automatic fact gathering
+  gather_facts: false
   tasks:
-    - name: "TASK 1: Get the device config"
+    - name: "Get device config"
       ios_command:
         commands: "show running-config"
       register: cli_result_config
     
-    - name: "TASK 2: Create outputs/ folder"
+    - name: "Create outputs folder"
       file:
-        path: "outputs/IOS"  # Fixed path - was IOS, dest was JUNOS
+        path: "/tmp/outputs/IOS"  # Use /tmp in AWX
         state: directory
       run_once: true
-      delegate_to: localhost  # Run this on the Ansible controller
+      delegate_to: localhost
     
-    - name: "TASK 3: Write config to file"
+    - name: "Write config to file"
       copy:
         content: "{{ cli_result_config.stdout[0] }}\n"
-        dest: "outputs/IOS/{{inventory_hostname}}.cfg"  # Fixed path consistency
-      delegate_to: localhost  # Run this on the Ansible controller
+        dest: "/tmp/outputs/IOS/{{inventory_hostname}}.cfg"
+      delegate_to: localhost
+    
+    - name: "Display backup location"
+      debug:
+        msg: "Config backed up to /tmp/outputs/IOS/{{inventory_hostname}}.cfg"
