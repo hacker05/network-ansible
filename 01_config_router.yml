@@ -11,9 +11,6 @@
       ios_config:
         lines: ip domain name testdomain.com
         backup: yes
-        backup_options:
-          dir_path: ./07_ios_config_demo/bkp/{{ inventory_hostname }}/
-          filename: "{{ inventory_hostname }}_{{ lookup('pipe', 'date +%Y-%m-%d@%H:%M:%S')}}.txt"
       register: domain_config
     
     - name: Print Command Output
