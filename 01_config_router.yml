@@ -1,22 +1,21 @@
 ---
-- name: Backup Cisco IOS XE Running Configuration
+- name: Configure domain name
   hosts: all
-  gather_facts: no
-
-#
-#  This could be really cool. 
-#  I just need to spend some time playing with it. 
-
-
+  gather_facts: false
   tasks:
-    - name: Backup Running Configuration
-      cisco.ios.ios_config:
-        backup: true
-        backup_options:
-          filename: iosx.cfg
-          dir_path: 
-      register: config_backup
-
-    - name: Display Backup File Path
+    - name: Print date and time
       ansible.builtin.debug:
-        msg: "Backup saved to {{ config_backup.backup_path }}"
+        msg: "{{ lookup('pipe', 'date +%Y-%m-%d@%H:%M:%S')}}"
+
+    - name: Configure domain
+      cisco.ios.ios_config:
+        lines: ip domain name testdomain.com
+        backup: yes
+        backup_options:
+          dir_path: ./07_ios_config_demo/bkp/{{ inventory_hostname }}/
+          filename: "{{ inventory_hostname }}_{{ ansible_ssh_host }}_{{ lookup('pipe', 'date +%Y-%m-%d@%H:%M:%S')}}.txt"
+      register: domain_config
+    
+    - name: Print Command Output
+      ansible.builtin.debug:
+        msg: "{{ domain_config }}"
