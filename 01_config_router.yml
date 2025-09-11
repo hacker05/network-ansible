@@ -2,19 +2,22 @@
 - name: "PLAY 2: Get the Data From IOS Device"
   hosts: all
   connection: network_cli
+  gather_facts: false  # Add this line to disable automatic fact gathering
   tasks:
     - name: "TASK 1: Get the device config"
       ios_command:
         commands: "show running-config"
       register: cli_result_config
-
-    - name: "TASK 2 : Create outputs/ folder"
+    
+    - name: "TASK 2: Create outputs/ folder"
       file:
-        path: "outputs/IOS"  #Path of the create folder
+        path: "outputs/IOS"  # Fixed path - was IOS, dest was JUNOS
         state: directory
       run_once: true
-
-    - name: "TASK 3 : Write config to file"
+      delegate_to: localhost  # Run this on the Ansible controller
+    
+    - name: "TASK 3: Write config to file"
       copy:
-        content: "{{ cli_result_config.stdout[0] }}\n" #Get content from output from Task 1
-        dest: "outputs/JUNOS/{{inventory_hostname}}.cfg"
+        content: "{{ cli_result_config.stdout[0] }}\n"
+        dest: "outputs/IOS/{{inventory_hostname}}.cfg"  # Fixed path consistency
+      delegate_to: localhost  # Run this on the Ansible controller
